@@ -22,6 +22,7 @@ export default function Dashboard() {
   const [updateFeedback, setUpdateFeedback] = useState<{ success?: boolean; message?: string } | null>(null);
   const [deletingFaq, setDeletingFaq] = useState<string | null>(null);
   const [faqFeedback, setFaqFeedback] = useState<{ success?: boolean; message?: string } | null>(null);
+  const [lisSortOrder, setLisSortOrder] = useState<'asc' | 'desc'>('desc');
 
   const handleDeleteFaq = async (question: string) => {
     setDeletingFaq(question);
@@ -229,6 +230,84 @@ export default function Dashboard() {
     return calculateStats(prevLeads, stats.newFAQs.questions);
   }, [stats, startDate, endDate]);
 
+  // Safe fallback if data structure is not fully loaded
+  const data = filteredStats || stats || {
+    leads: {
+      totalRegisteredWhatsapp: 0,
+      surveyStates: {
+        finalizada: { count: 0, percentage: 0 },
+        enCurso: { count: 0, percentage: 0 },
+        cancelada: { count: 0, percentage: 0 },
+        lis: { count: 0, percentage: 0 },
+        enCero: { count: 0, percentage: 0 },
+      },
+      surveyLengths: {
+        short: { count: 0, percentage: 0, finalizadaCount: 0 },
+        long: { count: 0, percentage: 0, finalizadaCount: 0 },
+      },
+      averageIterations: 0,
+      adaptogens: {
+        Pts_Melena: { average: 0, total: 0 },
+        Pts_Cordy: { average: 0, total: 0 },
+        Pts_Reishi: { average: 0, total: 0 },
+        Pts_Ashwa: { average: 0, total: 0 },
+        winner: { name: '', average: 0, total: 0 },
+      },
+      rawLeads: [],
+      allLeads: [],
+    },
+    newFAQs: {
+      totalQuestions: 0,
+      questions: [],
+    },
+  };
+
+  // Safe fallback if previous period data is not loaded
+  const prevData = prevStats || {
+    leads: {
+      totalRegisteredWhatsapp: 0,
+      surveyStates: {
+        finalizada: { count: 0, percentage: 0 },
+        enCurso: { count: 0, percentage: 0 },
+        cancelada: { count: 0, percentage: 0 },
+        lis: { count: 0, percentage: 0 },
+        enCero: { count: 0, percentage: 0 },
+      },
+      surveyLengths: {
+        short: { count: 0, percentage: 0, finalizadaCount: 0 },
+        long: { count: 0, percentage: 0, finalizadaCount: 0 },
+      },
+      averageIterations: 0,
+      adaptogens: {
+        Pts_Melena: { average: 0, total: 0 },
+        Pts_Cordy: { average: 0, total: 0 },
+        Pts_Reishi: { average: 0, total: 0 },
+        Pts_Ashwa: { average: 0, total: 0 },
+        winner: { name: '', average: 0, total: 0 },
+      },
+      rawLeads: [],
+      allLeads: [],
+    },
+    newFAQs: {
+      totalQuestions: 0,
+      questions: [],
+    },
+  };
+
+  // Filter and sort leads that are in state "Lis"
+  const lisLeads = useMemo(() => {
+    const list = (data.leads.allLeads || []).filter(lead =>
+      lead.status.toLowerCase() === 'lis' && lead.whatsappId !== ''
+    );
+    return [...list].sort((a, b) => {
+      if (!a.timestamp) return 1;
+      if (!b.timestamp) return -1;
+      if (a.timestamp < b.timestamp) return lisSortOrder === 'asc' ? -1 : 1;
+      if (a.timestamp > b.timestamp) return lisSortOrder === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }, [data.leads.allLeads, lisSortOrder]);
+
   // Helper to render comparison metric variation badge
   const renderComparison = (current: number, previous: number, isHigherBetter = true) => {
     const diff = current - previous;
@@ -279,68 +358,6 @@ export default function Dashboard() {
       </div>
     );
   }
-
-  // Safe fallback if data structure is not fully loaded
-  const data = filteredStats || stats || {
-    leads: {
-      totalRegisteredWhatsapp: 0,
-      surveyStates: {
-        finalizada: { count: 0, percentage: 0 },
-        enCurso: { count: 0, percentage: 0 },
-        cancelada: { count: 0, percentage: 0 },
-        lis: { count: 0, percentage: 0 },
-        enCero: { count: 0, percentage: 0 },
-      },
-      surveyLengths: {
-        short: { count: 0, percentage: 0, finalizadaCount: 0 },
-        long: { count: 0, percentage: 0, finalizadaCount: 0 },
-      },
-      averageIterations: 0,
-      adaptogens: {
-        Pts_Melena: { average: 0, total: 0 },
-        Pts_Cordy: { average: 0, total: 0 },
-        Pts_Reishi: { average: 0, total: 0 },
-        Pts_Ashwa: { average: 0, total: 0 },
-        winner: { name: '', average: 0, total: 0 },
-      },
-      rawLeads: [],
-    },
-    newFAQs: {
-      totalQuestions: 0,
-      questions: [],
-    },
-  };
-
-  // Safe fallback if previous period data is not loaded
-  const prevData = prevStats || {
-    leads: {
-      totalRegisteredWhatsapp: 0,
-      surveyStates: {
-        finalizada: { count: 0, percentage: 0 },
-        enCurso: { count: 0, percentage: 0 },
-        cancelada: { count: 0, percentage: 0 },
-        lis: { count: 0, percentage: 0 },
-        enCero: { count: 0, percentage: 0 },
-      },
-      surveyLengths: {
-        short: { count: 0, percentage: 0, finalizadaCount: 0 },
-        long: { count: 0, percentage: 0, finalizadaCount: 0 },
-      },
-      averageIterations: 0,
-      adaptogens: {
-        Pts_Melena: { average: 0, total: 0 },
-        Pts_Cordy: { average: 0, total: 0 },
-        Pts_Reishi: { average: 0, total: 0 },
-        Pts_Ashwa: { average: 0, total: 0 },
-        winner: { name: '', average: 0, total: 0 },
-      },
-      rawLeads: [],
-    },
-    newFAQs: {
-      totalQuestions: 0,
-      questions: [],
-    },
-  };
 
   // Calculate total leads (sum of state counts)
   const totalLeads = data.leads.surveyStates.finalizada.count +
@@ -859,6 +876,54 @@ export default function Dashboard() {
               ) : (
                 <div className="faq-empty">
                   No se han registrado preguntas en newFAQs.
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Derivados a Lis Card */}
+          <div className="card">
+            <h2 className="section-title">
+              <span>📞</span> Derivados a Lis ({lisLeads.length})
+            </h2>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '1.25rem' }}>
+              <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>
+                Lista de WhatsApp IDs que están actualmente en estado "Lis".
+              </p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>Orden:</span>
+                <select
+                  value={lisSortOrder}
+                  onChange={(e) => setLisSortOrder(e.target.value as 'asc' | 'desc')}
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    borderRadius: '6px',
+                    color: 'var(--text-main)',
+                    fontSize: '0.75rem',
+                    padding: '0.25rem 0.5rem',
+                    cursor: 'pointer',
+                    outline: 'none',
+                  }}
+                >
+                  <option value="desc" style={{ background: '#12121c' }}>Más nuevos primero</option>
+                  <option value="asc" style={{ background: '#12121c' }}>Más antiguos primero</option>
+                </select>
+              </div>
+            </div>
+            <div>
+              {lisLeads.length > 0 ? (
+                <div className="lis-list">
+                  {lisLeads.map((lead, idx) => (
+                    <div className="lis-item" key={idx}>
+                      <span>{lead.whatsappId}</span>
+                      <span className="lis-item-timestamp">{lead.timestamp}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div style={{ textAlign: 'center', padding: '1.5rem', color: 'var(--text-muted)', fontSize: '0.875rem' }}>
+                  No hay leads derivados a Lis en este rango de fechas.
                 </div>
               )}
             </div>

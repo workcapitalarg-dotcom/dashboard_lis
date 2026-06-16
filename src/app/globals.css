@@ -1024,3 +1024,50 @@ body {
   font-size: 0.7rem;
 }
 
+/* Lis Leads List Panel */
+.lis-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: 280px;
+  overflow-y: auto;
+  padding-right: 0.5rem;
+}
+
+.lis-list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.lis-list::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.lis-list::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 9999px;
+}
+
+.lis-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.03);
+  border-radius: 8px;
+  font-family: var(--font-family-mono);
+  font-size: 0.875rem;
+  color: var(--text-main);
+  transition: var(--transition-fast);
+}
+
+.lis-item:hover {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.06);
+}
+
+.lis-item-timestamp {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+}
+
