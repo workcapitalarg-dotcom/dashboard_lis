@@ -3,6 +3,12 @@ export interface SurveyStateStats {
   percentage: number;
 }
 
+export interface SurveyLengthStats {
+  count: number;
+  percentage: number;
+  finalizadaCount: number;
+}
+
 export interface AdaptogenStats {
   average: number;
   total: number;
@@ -31,8 +37,8 @@ export interface ParsedResult {
       enCero: SurveyStateStats;
     };
     surveyLengths: {
-      short: SurveyStateStats;
-      long: SurveyStateStats;
+      short: SurveyLengthStats;
+      long: SurveyLengthStats;
     };
     averageIterations: number;
     adaptogens: {
@@ -195,6 +201,8 @@ export function calculateStats(leads: LeadRecord[], newFAQsQuestions: string[]):
 
   let shortCount = 0;
   let longCount = 0;
+  let shortFinalizadaCount = 0;
+  let longFinalizadaCount = 0;
   let totalSigPreguntas = 0;
 
   let iterationsSum = 0;
@@ -209,7 +217,8 @@ export function calculateStats(leads: LeadRecord[], newFAQsQuestions: string[]):
 
   for (const lead of leads) {
     const state = lead.status.toLowerCase();
-    if (state.startsWith('finalizada')) {
+    const isFinalizada = state.startsWith('finalizada');
+    if (isFinalizada) {
       finalizadaCount++;
       totalStatesCount++;
     } else if (state.startsWith('en curso') || state.startsWith('en_curso')) {
@@ -231,9 +240,15 @@ export function calculateStats(leads: LeadRecord[], newFAQsQuestions: string[]):
       if (sigPreg.startsWith('c')) {
         shortCount++;
         totalSigPreguntas++;
+        if (isFinalizada) {
+          shortFinalizadaCount++;
+        }
       } else if (sigPreg.startsWith('l')) {
         longCount++;
         totalSigPreguntas++;
+        if (isFinalizada) {
+          longFinalizadaCount++;
+        }
       }
     }
 
@@ -260,9 +275,10 @@ export function calculateStats(leads: LeadRecord[], newFAQsQuestions: string[]):
     percentage: totalStatesCount > 0 ? (count / totalStatesCount) * 100 : 0,
   });
 
-  const calcSigStats = (count: number): SurveyStateStats => ({
+  const calcSigStats = (count: number, finalizadaCount: number): SurveyLengthStats => ({
     count,
     percentage: totalSigPreguntas > 0 ? (count / totalSigPreguntas) * 100 : 0,
+    finalizadaCount,
   });
 
   const avgMelena = adaptogensData.Pts_Melena.count > 0 ? adaptogensData.Pts_Melena.sum / adaptogensData.Pts_Melena.count : 0;
@@ -305,8 +321,8 @@ export function calculateStats(leads: LeadRecord[], newFAQsQuestions: string[]):
         enCero: calcStateStats(enCeroCount),
       },
       surveyLengths: {
-        short: calcSigStats(shortCount),
-        long: calcSigStats(longCount),
+        short: calcSigStats(shortCount, shortFinalizadaCount),
+        long: calcSigStats(longCount, longFinalizadaCount),
       },
       averageIterations: iterationsCount > 0 ? iterationsSum / iterationsCount : 0,
       adaptogens: {

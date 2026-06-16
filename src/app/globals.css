@@ -979,3 +979,48 @@ body {
     width: 100%;
   }
 }
+
+/* Comparison Metrics Badges & Wrapper */
+.comparison-wrapper {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+}
+
+.comparison-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.125rem 0.4rem;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.comparison-positive {
+  background: rgba(16, 185, 129, 0.1);
+  color: var(--primary);
+  border: 1px solid rgba(16, 185, 129, 0.15);
+}
+
+.comparison-negative {
+  background: rgba(244, 63, 94, 0.1);
+  color: var(--danger);
+  border: 1px solid rgba(244, 63, 94, 0.15);
+}
+
+.comparison-neutral {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-muted);
+  border: 1px solid var(--border-glow);
+}
+
+.comparison-label {
+  color: var(--text-dim);
+  font-weight: 500;
+  white-space: nowrap;
+  font-size: 0.7rem;
+}
+

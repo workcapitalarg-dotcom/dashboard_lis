@@ -61,8 +61,10 @@ describe('parseSheetsData', () => {
     // 3. sig_pregunta_id stats (short 'c' vs long 'l')
     expect(result.leads.surveyLengths.short.count).toBe(5);
     expect(result.leads.surveyLengths.short.percentage).toBeCloseTo(71.43, 2);
+    expect(result.leads.surveyLengths.short.finalizadaCount).toBe(1); // Only Frank is finalizada with 'c'
     expect(result.leads.surveyLengths.long.count).toBe(2);
     expect(result.leads.surveyLengths.long.percentage).toBeCloseTo(28.57, 2);
+    expect(result.leads.surveyLengths.long.finalizadaCount).toBe(2); // Alice and David are finalizada with 'l'
 
     // 4. resumen_rmkg average iterations
     expect(result.leads.averageIterations).toBeCloseTo(3.29, 2);

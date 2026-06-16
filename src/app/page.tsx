@@ -159,6 +159,10 @@ export default function Dashboard() {
     if (presetId === 'all') {
       setStartDate(minDate);
       setEndDate(maxDate);
+    } else if (presetId === 'today') {
+      const todayStr = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
+      setStartDate(todayStr);
+      setEndDate(todayStr);
     } else if (presetId === '7d') {
       const start = new Date();
       start.setDate(today.getDate() - 7);
@@ -176,6 +180,30 @@ export default function Dashboard() {
     }
   };
 
+  // Helper to calculate the previous equivalent date range
+  const getPreviousDateRange = (startDateStr: string, endDateStr: string) => {
+    if (!startDateStr || !endDateStr) return null;
+    const start = new Date(startDateStr + 'T00:00:00');
+    const end = new Date(endDateStr + 'T00:00:00');
+    const diffTime = end.getTime() - start.getTime(); // in ms
+    
+    // Previous period ends 1 day before current start date
+    const prevEnd = new Date(start.getTime() - 24 * 60 * 60 * 1000);
+    const prevStart = new Date(prevEnd.getTime() - diffTime);
+    
+    const formatDate = (d: Date) => {
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+    
+    return {
+      startDate: formatDate(prevStart),
+      endDate: formatDate(prevEnd)
+    };
+  };
+
   // Memoized filtered stats
   const filteredStats = useMemo(() => {
     if (!stats) return null;
@@ -186,6 +214,47 @@ export default function Dashboard() {
 
     return calculateStats(filteredLeads, stats.newFAQs.questions);
   }, [stats, startDate, endDate]);
+
+  // Memoized previous period stats
+  const prevStats = useMemo(() => {
+    if (!stats || !startDate || !endDate) return null;
+    
+    const prevRange = getPreviousDateRange(startDate, endDate);
+    if (!prevRange) return null;
+
+    const prevLeads = stats.leads.allLeads.filter(lead => 
+      isDateInRange(lead.timestamp, prevRange.startDate, prevRange.endDate)
+    );
+
+    return calculateStats(prevLeads, stats.newFAQs.questions);
+  }, [stats, startDate, endDate]);
+
+  // Helper to render comparison metric variation badge
+  const renderComparison = (current: number, previous: number, isHigherBetter = true) => {
+    const diff = current - previous;
+    const pctChange = previous > 0 ? (diff / previous) * 100 : 0;
+    
+    let badgeClass = 'comparison-badge comparison-neutral';
+    let sign = '';
+    
+    if (diff > 0) {
+      badgeClass = isHigherBetter ? 'comparison-badge comparison-positive' : 'comparison-badge comparison-negative';
+      sign = '+';
+    } else if (diff < 0) {
+      badgeClass = isHigherBetter ? 'comparison-badge comparison-negative' : 'comparison-badge comparison-positive';
+    }
+    
+    return (
+      <div className="comparison-wrapper">
+        <span className={badgeClass}>
+          {sign}{pctChange.toFixed(1)}%
+        </span>
+        <span className="comparison-label">
+          vs anterior: {previous.toFixed(previous % 1 === 0 ? 0 : 2)}
+        </span>
+      </div>
+    );
+  };
 
   const handleRefresh = () => {
     fetchStats(true);
@@ -223,8 +292,39 @@ export default function Dashboard() {
         enCero: { count: 0, percentage: 0 },
       },
       surveyLengths: {
-        short: { count: 0, percentage: 0 },
-        long: { count: 0, percentage: 0 },
+        short: { count: 0, percentage: 0, finalizadaCount: 0 },
+        long: { count: 0, percentage: 0, finalizadaCount: 0 },
+      },
+      averageIterations: 0,
+      adaptogens: {
+        Pts_Melena: { average: 0, total: 0 },
+        Pts_Cordy: { average: 0, total: 0 },
+        Pts_Reishi: { average: 0, total: 0 },
+        Pts_Ashwa: { average: 0, total: 0 },
+        winner: { name: '', average: 0, total: 0 },
+      },
+      rawLeads: [],
+    },
+    newFAQs: {
+      totalQuestions: 0,
+      questions: [],
+    },
+  };
+
+  // Safe fallback if previous period data is not loaded
+  const prevData = prevStats || {
+    leads: {
+      totalRegisteredWhatsapp: 0,
+      surveyStates: {
+        finalizada: { count: 0, percentage: 0 },
+        enCurso: { count: 0, percentage: 0 },
+        cancelada: { count: 0, percentage: 0 },
+        lis: { count: 0, percentage: 0 },
+        enCero: { count: 0, percentage: 0 },
+      },
+      surveyLengths: {
+        short: { count: 0, percentage: 0, finalizadaCount: 0 },
+        long: { count: 0, percentage: 0, finalizadaCount: 0 },
       },
       averageIterations: 0,
       adaptogens: {
@@ -329,6 +429,7 @@ export default function Dashboard() {
             <div className="preset-buttons">
               {[
                 { id: 'all', label: 'Todos' },
+                { id: 'today', label: 'Hoy' },
                 { id: '7d', label: 'Últimos 7 días' },
                 { id: '30d', label: 'Últimos 30 días' },
                 { id: 'thisMonth', label: 'Este mes' },
@@ -385,7 +486,10 @@ export default function Dashboard() {
             <span className="kpi-icon">📱</span>
           </div>
           <div>
-            <div className="kpi-value">{data.leads.totalRegisteredWhatsapp}</div>
+            <div className="kpi-value-container" style={{ display: 'flex', alignItems: 'baseline', gap: '1rem', flexWrap: 'wrap' }}>
+              <div className="kpi-value">{data.leads.totalRegisteredWhatsapp}</div>
+              {renderComparison(data.leads.totalRegisteredWhatsapp, prevData.leads.totalRegisteredWhatsapp)}
+            </div>
             <div className="kpi-footer">WhatsApp IDs únicos registrados</div>
           </div>
         </div>
@@ -396,7 +500,10 @@ export default function Dashboard() {
             <span className="kpi-icon">🔄</span>
           </div>
           <div>
-            <div className="kpi-value">{data.leads.averageIterations.toFixed(2)}</div>
+            <div className="kpi-value-container" style={{ display: 'flex', alignItems: 'baseline', gap: '1rem', flexWrap: 'wrap' }}>
+              <div className="kpi-value">{data.leads.averageIterations.toFixed(2)}</div>
+              {renderComparison(data.leads.averageIterations, prevData.leads.averageIterations)}
+            </div>
             <div className="kpi-footer">Iteraciones de marketing por usuario</div>
           </div>
         </div>
@@ -446,10 +553,13 @@ export default function Dashboard() {
               <div className="state-progress-item">
                 <div className="state-meta">
                   <span className="state-label">Finalizadas</span>
-                  <span className="state-numbers">
-                    {data.leads.surveyStates.finalizada.count}{' '}
-                    <span className="state-percentage">({data.leads.surveyStates.finalizada.percentage.toFixed(1)}%)</span>
-                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <span className="state-numbers">
+                      {data.leads.surveyStates.finalizada.count}{' '}
+                      <span className="state-percentage">({data.leads.surveyStates.finalizada.percentage.toFixed(1)}%)</span>
+                    </span>
+                    {renderComparison(data.leads.surveyStates.finalizada.count, prevData.leads.surveyStates.finalizada.count)}
+                  </div>
                 </div>
                 <div className="progress-track">
                   <div
@@ -462,10 +572,13 @@ export default function Dashboard() {
               <div className="state-progress-item">
                 <div className="state-meta">
                   <span className="state-label">En Curso</span>
-                  <span className="state-numbers">
-                    {data.leads.surveyStates.enCurso.count}{' '}
-                    <span className="state-percentage">({data.leads.surveyStates.enCurso.percentage.toFixed(1)}%)</span>
-                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <span className="state-numbers">
+                      {data.leads.surveyStates.enCurso.count}{' '}
+                      <span className="state-percentage">({data.leads.surveyStates.enCurso.percentage.toFixed(1)}%)</span>
+                    </span>
+                    {renderComparison(data.leads.surveyStates.enCurso.count, prevData.leads.surveyStates.enCurso.count)}
+                  </div>
                 </div>
                 <div className="progress-track">
                   <div
@@ -478,10 +591,13 @@ export default function Dashboard() {
               <div className="state-progress-item">
                 <div className="state-meta">
                   <span className="state-label">Canceladas</span>
-                  <span className="state-numbers">
-                    {data.leads.surveyStates.cancelada.count}{' '}
-                    <span className="state-percentage">({data.leads.surveyStates.cancelada.percentage.toFixed(1)}%)</span>
-                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <span className="state-numbers">
+                      {data.leads.surveyStates.cancelada.count}{' '}
+                      <span className="state-percentage">({data.leads.surveyStates.cancelada.percentage.toFixed(1)}%)</span>
+                    </span>
+                    {renderComparison(data.leads.surveyStates.cancelada.count, prevData.leads.surveyStates.cancelada.count)}
+                  </div>
                 </div>
                 <div className="progress-track">
                   <div
@@ -494,10 +610,13 @@ export default function Dashboard() {
               <div className="state-progress-item">
                 <div className="state-meta">
                   <span className="state-label">Lis</span>
-                  <span className="state-numbers">
-                    {data.leads.surveyStates.lis.count}{' '}
-                    <span className="state-percentage">({data.leads.surveyStates.lis.percentage.toFixed(1)}%)</span>
-                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <span className="state-numbers">
+                      {data.leads.surveyStates.lis.count}{' '}
+                      <span className="state-percentage">({data.leads.surveyStates.lis.percentage.toFixed(1)}%)</span>
+                    </span>
+                    {renderComparison(data.leads.surveyStates.lis.count, prevData.leads.surveyStates.lis.count)}
+                  </div>
                 </div>
                 <div className="progress-track">
                   <div
@@ -510,10 +629,13 @@ export default function Dashboard() {
               <div className="state-progress-item">
                 <div className="state-meta">
                   <span className="state-label">No iniciadas</span>
-                  <span className="state-numbers">
-                    {data.leads.surveyStates.enCero.count}{' '}
-                    <span className="state-percentage">({data.leads.surveyStates.enCero.percentage.toFixed(1)}%)</span>
-                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <span className="state-numbers">
+                      {data.leads.surveyStates.enCero.count}{' '}
+                      <span className="state-percentage">({data.leads.surveyStates.enCero.percentage.toFixed(1)}%)</span>
+                    </span>
+                    {renderComparison(data.leads.surveyStates.enCero.count, prevData.leads.surveyStates.enCero.count)}
+                  </div>
                 </div>
                 <div className="progress-track">
                   <div
@@ -539,6 +661,10 @@ export default function Dashboard() {
                 <span className="length-title">Encuesta Corta (C)</span>
                 <div className="length-val text-short">{data.leads.surveyLengths.short.count}</div>
                 <div className="length-pct text-short">{data.leads.surveyLengths.short.percentage.toFixed(1)}%</div>
+                <div style={{ fontSize: '0.825rem', color: 'rgba(255, 255, 255, 0.7)', marginTop: '0.25rem', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem' }}>
+                  <span style={{ color: '#10b981', fontWeight: 'bold' }}>✓</span> {data.leads.surveyLengths.short.finalizadaCount} finalizadas ({data.leads.surveyLengths.short.count > 0 ? ((data.leads.surveyLengths.short.finalizadaCount / data.leads.surveyLengths.short.count) * 100).toFixed(1) : '0.0'}%)
+                </div>
+                {renderComparison(data.leads.surveyLengths.short.count, prevData.leads.surveyLengths.short.count)}
               </div>
 
               <div className="length-option-card">
@@ -546,6 +672,10 @@ export default function Dashboard() {
                 <span className="length-title">Encuesta Larga (L)</span>
                 <div className="length-val text-long">{data.leads.surveyLengths.long.count}</div>
                 <div className="length-pct text-long">{data.leads.surveyLengths.long.percentage.toFixed(1)}%</div>
+                <div style={{ fontSize: '0.825rem', color: 'rgba(255, 255, 255, 0.7)', marginTop: '0.25rem', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem' }}>
+                  <span style={{ color: '#10b981', fontWeight: 'bold' }}>✓</span> {data.leads.surveyLengths.long.finalizadaCount} finalizadas ({data.leads.surveyLengths.long.count > 0 ? ((data.leads.surveyLengths.long.finalizadaCount / data.leads.surveyLengths.long.count) * 100).toFixed(1) : '0.0'}%)
+                </div>
+                {renderComparison(data.leads.surveyLengths.long.count, prevData.leads.surveyLengths.long.count)}
               </div>
             </div>
           </div>
