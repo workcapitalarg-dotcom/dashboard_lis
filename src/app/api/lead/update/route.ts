@@ -1,34 +1,10 @@
 import { NextResponse } from 'next/server';
 import { google } from 'googleapis';
-import * as fs from 'fs';
-import * as path from 'path';
+import { getGoogleCredentials } from '../../../../lib/env';
 
 export const dynamic = 'force-dynamic';
 
 const SPREADSHEET_ID = '14Syfpkb_GLBVJYrpQGv5yntaFHySbI7RJq6G-ilxZ-Q';
-
-function loadEnvLocal(): Record<string, string> {
-  const envPath = path.resolve(process.cwd(), '.env.local');
-  if (!fs.existsSync(envPath)) return {};
-
-  const content = fs.readFileSync(envPath, 'utf8');
-  const result: Record<string, string> = {};
-
-  content.split(/\r?\n/).forEach(line => {
-    const match = line.match(/^\s*([^#=]+)\s*=\s*(.*)$/);
-    if (match) {
-      const key = match[1].trim();
-      let val = match[2].trim();
-      if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
-        val = val.slice(1, -1);
-      }
-      val = val.replace(/\\n/g, '\n');
-      result[key] = val;
-    }
-  });
-
-  return result;
-}
 
 export async function POST(request: Request) {
   try {
@@ -39,9 +15,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Faltan parámetros requeridos: whatsappId, newStatus' }, { status: 400 });
     }
 
-    const env = loadEnvLocal();
-    const email = env['GOOGLE_SERVICE_ACCOUNT_EMAIL'];
-    const privateKey = env['GOOGLE_PRIVATE_KEY'];
+    const { email, privateKey } = getGoogleCredentials();
 
     if (!email || !privateKey) {
       return NextResponse.json({
